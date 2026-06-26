@@ -3,71 +3,221 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>HP Control V3 - Master</title>
-    
+    <title>HP Control - Master</title>
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
-
     <style>
-        * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
-        body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-            background: #0a0a12;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            min-height: 100vh;
-            color: #fff;
-            padding: 16px;
-        }
-        .container {
-            width: 100%;
-            max-width: 420px;
-            background: linear-gradient(160deg, #12121f, #1a1a2e);
-            border-radius: 42px;
-            padding: 20px 16px 24px;
-            box-shadow: 0 25px 80px rgba(0,0,0,0.9);
-            border: 1px solid rgba(255,255,255,0.04);
-            min-height: 600px;
-        }
-        .header { text-align: center; padding: 4px 0 12px; border-bottom: 1px solid rgba(255,255,255,0.03); margin-bottom: 12px; }
-        .header h1 { font-size: 22px; font-weight: 700; background: linear-gradient(135deg, #fbbf24, #f59e0b); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
-        .header .sub { font-size: 11px; color: #666; margin-top: 2px; }
-        .header .badge { display: inline-block; padding: 2px 10px; border-radius: 20px; font-size: 9px; margin-top: 4px; }
-        .badge.online { background: rgba(74,222,128,0.15); color: #4ade80; }
-        .badge.offline { background: rgba(248,113,113,0.15); color: #f87171; }
-
-        .device-list { margin: 8px 0 12px; max-height: 200px; overflow-y: auto; }
-        .device-list::-webkit-scrollbar { width: 3px; }
-        .device-list::-webkit-scrollbar-thumb { background: #fbbf24; border-radius: 10px; }
-
-        .device-item {
-            display: flex; align-items: center; gap: 10px; padding: 8px 12px;
-            background: rgba(255,255,255,0.03); border-radius: 12px; margin-bottom: 4px;
-            border: 1px solid rgba(255,255,255,0.04); cursor: pointer; transition: all 0.2s ease;
-        }
-        .device-item:active { transform: scale(0.97); }
-        .device-item .icon { font-size: 18px; }
-        .device-item .info { flex: 1; min-width: 0; }
-        .device-item .info .name { font-size: 13px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-        .device-item .info .id { font-size: 9px; color: #555; }
-        .device-item .status { font-size: 9px; padding: 2px 8px; border-radius: 20px; white-space: nowrap; }
-        .device-item .status.online { background: rgba(74,222,128,0.15); color: #4ade80; }
-        .device-item .status.offline { background: rgba(248,113,113,0.15); color: #f87171; }
-        .device-item .status.locked { background: rgba(251,191,36,0.15); color: #fbbf24; }
-        .device-item.selected { border-color: #fbbf24; background: rgba(251,191,36,0.06); }
-        .device-item .check { display: none; color: #4ade80; font-size: 14px; }
-        .device-item.selected .check { display: block; }
-        .device-item .lock-icon { font-size: 14px; }
-        .device-item .lock-icon.locked { color: #fbbf24; }
-
-        .empty-state { text-align: center; color: #555; padding: 16px 0; font-size: 12px; }
-        .empty-state .icon { font-size: 32px; display: block; margin-bottom: 4px; }
-
-        .control-panel {
-            background: rgba(255,255,255,0.02);
-            border-radius: 16px;
-            padding: 12px;
+        *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+        body{font-family:-apple-system,sans-serif;background:#0a0a12;display:flex;justify-content:center;align-items:center;min-height:100vh;color:#fff;padding:16px}
+        .container{width:100%;max-width:420px;background:linear-gradient(160deg,#12121f,#1a1a2e);border-radius:42px;padding:20px 16px 24px;border:1px solid rgba(255,255,255,0.04)}
+        .header{text-align:center;padding:4px 0 12px;border-bottom:1px solid rgba(255,255,255,0.03);margin-bottom:12px}
+        .header h1{font-size:22px;font-weight:700;background:linear-gradient(135deg,#fbbf24,#f59e0b);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+        .header .sub{font-size:11px;color:#666}
+        .badge{display:inline-block;padding:2px 12px;border-radius:20px;font-size:10px;margin-top:4px}
+        .badge.online{background:rgba(74,222,128,0.15);color:#4ade80}
+        .badge.offline{background:rgba(248,113,113,0.15);color:#f87171}
+        .device-list{margin:8px 0 12px;max-height:200px;overflow-y:auto}
+        .device-list::-webkit-scrollbar{width:3px}
+        .device-list::-webkit-scrollbar-thumb{background:#fbbf24;border-radius:10px}
+        .device-item{display:flex;align-items:center;gap:10px;padding:8px 12px;background:rgba(255,255,255,0.03);border-radius:12px;margin-bottom:4px;border:1px solid rgba(255,255,255,0.04);cursor:pointer}
+        .device-item:active{transform:scale(0.97)}
+        .device-item .icon{font-size:18px}
+        .device-item .info{flex:1;min-width:0}
+        .device-item .info .name{font-size:13px;font-weight:600}
+        .device-item .info .id{font-size:9px;color:#555}
+        .device-item .status{font-size:9px;padding:2px 8px;border-radius:20px}
+        .device-item .status.online{background:rgba(74,222,128,0.15);color:#4ade80}
+        .device-item .status.offline{background:rgba(248,113,113,0.15);color:#f87171}
+        .device-item .status.locked{background:rgba(251,191,36,0.15);color:#fbbf24}
+        .device-item.selected{border-color:#fbbf24;background:rgba(251,191,36,0.06)}
+        .device-item .check{display:none;color:#4ade80;font-size:14px}
+        .device-item.selected .check{display:block}
+        .empty-state{text-align:center;color:#555;padding:20px 0;font-size:12px}
+        .empty-state .icon{font-size:32px;display:block;margin-bottom:4px}
+        .control-panel{background:rgba(255,255,255,0.02);border-radius:16px;padding:12px;border:1px solid rgba(255,255,255,0.04);margin-top:8px}
+        .control-panel .title{font-size:11px;color:#666;margin-bottom:8px;text-align:center}
+        .control-panel .title span{color:#fbbf24;font-weight:600}
+        .control-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:5px}
+        .ctrl-btn{padding:10px 3px;border-radius:10px;border:1px solid rgba(255,255,255,0.06);background:rgba(255,255,255,0.03);color:#fff;font-size:18px;cursor:pointer;text-align:center}
+        .ctrl-btn:active{transform:scale(0.92);background:rgba(251,191,36,0.08)}
+        .ctrl-btn .label{display:block;font-size:7px;color:#666}
+        .ctrl-btn:disabled{opacity:0.2;cursor:not-allowed}
+        .ctrl-btn.senter-on{background:rgba(251,191,36,0.15);border-color:#fbbf24}
+        .feature-section{background:rgba(255,255,255,0.02);border-radius:16px;padding:12px;border:1px solid rgba(255,255,255,0.04);margin-top:8px}
+        .feature-section .label{font-size:10px;color:#666;display:block;margin-bottom:4px}
+        .feature-section input{width:100%;padding:8px 12px;border-radius:10px;border:1px solid rgba(255,255,255,0.08);background:rgba(255,255,255,0.05);color:#fff;font-size:13px;outline:none;margin-bottom:4px}
+        .feature-section input:focus{border-color:#fbbf24}
+        .feature-section input::placeholder{color:#555}
+        .feature-section .btn-row{display:flex;gap:4px}
+        .feature-section .btn-row .btn{flex:1;padding:8px;border-radius:10px;border:none;font-weight:600;font-size:11px;cursor:pointer;text-align:center}
+        .feature-section .btn-row .btn:active{transform:scale(0.95)}
+        .btn-lock{background:linear-gradient(135deg,#fbbf24,#f59e0b);color:#0a0a12}
+        .btn-unlock{background:linear-gradient(135deg,#4ade80,#22c55e);color:#0a0a12}
+        .btn-send{background:linear-gradient(135deg,#60a5fa,#3b82f6);color:#fff}
+        .toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%) translateY(80px);background:rgba(0,0,0,0.88);padding:10px 24px;border-radius:30px;font-size:12px;color:#fff;transition:all 0.4s;opacity:0;pointer-events:none;z-index:100}
+        .toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+        .status-bar{display:flex;justify-content:space-between;font-size:9px;color:#444;padding-top:8px;margin-top:8px;border-top:1px solid rgba(255,255,255,0.03)}
+        @media(max-width:420px){.container{padding:14px}.control-grid{gap:4px}.ctrl-btn{padding:8px 2px;font-size:16px}.ctrl-btn .label{font-size:6px}.feature-section .btn-row{flex-direction:column;gap:4px}}
+    </style>
+</head>
+<body>
+<div class="container">
+    <div class="header">
+        <h1>🎮 HP Control</h1>
+        <div class="sub">Real-Time Master</div>
+        <div class="badge online" id="connectionBadge">🟢 Online</div>
+    </div>
+    <div class="device-list" id="deviceList">
+        <div class="empty-state">
+            <span class="icon">📡</span>
+            <span>Menunggu perangkat...</span>
+        </div>
+    </div>
+    <div class="control-panel">
+        <div class="title">🎯 Kontrol: <span id="selectedDeviceName">-</span></div>
+        <div class="control-grid">
+            <button class="ctrl-btn" id="btnSenter" disabled>🔦<span class="label">SENTER</span></button>
+            <button class="ctrl-btn" id="btnFlash" disabled>⚡<span class="label">KELAP</span></button>
+            <button class="ctrl-btn" id="btnVolUp" disabled>🔊+<span class="label">VOL+</span></button>
+            <button class="ctrl-btn" id="btnVolDown" disabled>🔊-<span class="label">VOL-</span></button>
+            <button class="ctrl-btn" id="btnMute" disabled>🔇<span class="label">MUTE</span></button>
+            <button class="ctrl-btn" id="btnVibrate" disabled>📳<span class="label">GETAR</span></button>
+            <button class="ctrl-btn" id="btnScreenshot" disabled>📸<span class="label">SCREEN</span></button>
+            <button class="ctrl-btn" id="btnBrightness" disabled>☀️<span class="label">CERAH</span></button>
+        </div>
+    </div>
+    <div class="feature-section">
+        <div class="label">🔒 Lock / Unlock &amp; Kirim Pesan</div>
+        <input type="text" id="messageInput" placeholder="📝 Pesan...">
+        <input type="password" id="passwordInput" placeholder="🔑 Password (contoh: 1234)">
+        <div class="btn-row">
+            <button class="btn btn-lock" id="btnLock">🔒 LOCK</button>
+            <button class="btn btn-unlock" id="btnUnlock">🔓 UNLOCK</button>
+            <button class="btn btn-send" id="btnSend">💬 KIRIM</button>
+        </div>
+    </div>
+    <div class="status-bar">
+        <span id="deviceCount">📱 0</span>
+        <span id="tapCounter">👆 0</span>
+    </div>
+</div>
+<div class="toast" id="toast"></div>
+<script>
+const firebaseConfig={
+    apiKey:"AIzaSyAMPRDBZpifLtY0ycPiq_sNtTfZ33S_314",
+    authDomain:"hp-kontrol-eadb6.firebaseapp.com",
+    databaseURL:"https://hp-kontrol-eadb6-default-rtdb.asia-southeast1.firebasedatabase.app",
+    projectId:"hp-kontrol-eadb6",
+    storageBucket:"hp-kontrol-eadb6.firebasestorage.app",
+    messagingSenderId:"244204513994",
+    appId:"1:244204513994:web:78a77963315882732ca233"
+};
+firebase.initializeApp(firebaseConfig);
+const db=firebase.database();
+const ROOM='hp-control-demo';
+const MASTER_ID='master_'+Date.now();
+let devices={},selectedId=null,tap=0,timer=null;
+const $=id=>document.getElementById(id);
+const deviceList=$('deviceList'),selectedName=$('selectedDeviceName'),deviceCount=$('deviceCount'),tapCounter=$('tapCounter'),toast=$('toast'),badge=$('connectionBadge');
+const msgIn=$('messageInput'),passIn=$('passwordInput');
+const btnSenter=$('btnSenter'),btnFlash=$('btnFlash'),btnVolUp=$('btnVolUp'),btnVolDown=$('btnVolDown'),btnMute=$('btnMute'),btnVibrate=$('btnVibrate'),btnScreenshot=$('btnScreenshot'),btnBrightness=$('btnBrightness'),btnLock=$('btnLock'),btnUnlock=$('btnUnlock'),btnSend=$('btnSend');
+function showToast(m,d=2000){if(timer)clearTimeout(timer);toast.textContent=m;toast.classList.add('show');timer=setTimeout(()=>toast.classList.remove('show'),d);}
+function renderDevices(){
+    const arr=Object.values(devices);
+    if(!arr.length){deviceList.innerHTML='<div class="empty-state"><span class="icon">📡</span><span>Menunggu perangkat...</span></div>';deviceCount.textContent='📱 0';return;}
+    let html='';
+    arr.forEach(d=>{
+        const sel=d.id===selectedId,on=d.status==='online',lock=d.isLocked||false,flash=d.flashOn||false;
+        html+=`<div class="device-item ${sel?'selected':''}" data-id="${d.id}">
+            <span class="icon">${d.icon||'📱'}</span>
+            <div class="info"><div class="name">${d.name}</div><div class="id">${d.id.substring(0,8)}...</div></div>
+            <span>${lock?'🔒':'🔓'}</span>
+            <span>${flash?'💡':''}</span>
+            <span class="status ${on?(lock?'locked':'online'):'offline'}">${on?(lock?'🔒 Locked':'🟢 Online'):'🔴 Offline'}</span>
+            <span class="check">✅</span>
+        </div>`;
+    });
+    deviceList.innerHTML=html;
+    deviceCount.textContent=`📱 ${arr.length}`;
+    document.querySelectorAll('.device-item').forEach(el=>{
+        el.onclick=function(){
+            const id=this.dataset.id,d=devices[id];
+            if(!d||d.status!=='online'){showToast('⚠️ Offline!');return;}
+            selectDevice(id);
+        };
+    });
+    if(selectedId&&devices[selectedId]){selectedName.textContent=devices[selectedId].name;updateControls(true);}
+    else{selectedName.textContent='-';updateControls(false);}
+}
+function selectDevice(id){selectedId=id;if(devices[id]){selectedName.textContent=devices[id].name;showToast('✅ '+devices[id].name);}renderDevices();updateControls(true);}
+function updateControls(en){
+    [btnSenter,btnFlash,btnVolUp,btnVolDown,btnMute,btnVibrate,btnScreenshot,btnBrightness,btnLock,btnUnlock,btnSend].forEach(b=>b.disabled=!en);
+    if(en&&selectedId&&devices[selectedId]){
+        const d=devices[selectedId];
+        if(d.flashOn){btnSenter.classList.add('senter-on');btnSenter.innerHTML='🔦<span class="label">MATIKAN</span>';}
+        else{btnSenter.classList.remove('senter-on');btnSenter.innerHTML='🔦<span class="label">SENTER</span>';}
+    }
+}
+function sendCommand(a,v=null){
+    if(!selectedId){showToast('⚠️ Pilih device!');return;}
+    const d=devices[selectedId];
+    if(!d||d.status!=='online'){showToast('⚠️ Offline!');return;}
+    tap++;tapCounter.textContent='👆 '+tap;
+    db.ref(ROOM+'/commands/'+selectedId).set({action:a,value:v,from:MASTER_ID,timestamp:firebase.database.ServerValue.TIMESTAMP});
+    showToast('📤 '+a+' → '+d.name,1000);
+}
+db.ref(ROOM+'/devices').on('value',s=>{
+    const data=s.val();
+    if(data){
+        Object.keys(data).forEach(k=>{
+            const d=data[k],now=Date.now(),last=d.lastSeen||0;
+            d.status=(now-last>15000)?'offline':(d.status||'online');
+            devices[k]=d;
+        });
+        Object.keys(devices).forEach(k=>{
+            const d=devices[k],now=Date.now(),last=d.lastSeen||0;
+            if(now-last>30000)delete devices[k];
+        });
+        renderDevices();
+        const online=Object.values(devices).filter(d=>d.status==='online');
+        if(online.length===1&&!selectedId)selectDevice(online[0].id);
+    }else{devices={};renderDevices();}
+});
+db.ref(ROOM+'/responses').on('child_added',s=>{
+    const d=s.val();
+    if(d&&d.deviceId){
+        if(d.action==='senter'&&devices[d.deviceId]){devices[d.deviceId].flashOn=d.value;renderDevices();updateControls(true);}
+        if(d.action==='lock'&&devices[d.deviceId]){devices[d.deviceId].isLocked=d.value;renderDevices();showToast(d.value?'🔒 Terkunci!':'🔓 Terbuka!');}
+        if(d.action==='message')showToast('💬 Pesan terkirim!');
+        if(d.action==='flash')showToast('⚡ Kelap-kelip selesai!');
+    }
+});
+db.ref(ROOM+'/devices').on('child_changed',s=>{const d=s.val(),k=s.key;if(k&&d&&devices[k]){devices[k]={...devices[k],...d};renderDevices();updateControls(true);}});
+db.ref(ROOM+'/devices').on('child_removed',s=>{const k=s.key;if(k&&devices[k]){showToast('🔴 '+devices[k].name+' offline');delete devices[k];if(selectedId===k){selectedId=null;selectedName.textContent='-';updateControls(false);}renderDevices();}});
+db.ref(ROOM+'/masters/'+MASTER_ID).set({status:'online',timestamp:firebase.database.ServerValue.TIMESTAMP});
+db.ref(ROOM+'/masters/'+MASTER_ID).onDisconnect().remove();
+btnSenter.onclick=()=>sendCommand('senter');
+btnFlash.onclick=()=>sendCommand('flash');
+btnVolUp.onclick=()=>sendCommand('volume_up');
+btnVolDown.onclick=()=>sendCommand('volume_down');
+btnMute.onclick=()=>sendCommand('mute');
+btnVibrate.onclick=()=>sendCommand('vibrate');
+btnScreenshot.onclick=()=>sendCommand('screenshot');
+btnBrightness.onclick=()=>sendCommand('brightness_up');
+btnLock.onclick=()=>{const p=passIn.value.trim()||'1234',m=msgIn.value.trim()||'🔒 Terkunci!';sendCommand('lock',{locked:true,password:p,message:m});};
+btnUnlock.onclick=()=>{const p=passIn.value.trim()||'1234';sendCommand('lock',{locked:false,password:p});};
+btnSend.onclick=()=>{const m=msgIn.value.trim()||'Halo!';sendCommand('message',m);msgIn.value='';};
+updateControls(false);
+showToast('✅ Siap! Tunggu device.',2000);
+db.ref('.info/connected').on('value',s=>{
+    if(s.val()===true){badge.textContent='🟢 Online';badge.className='badge online';}
+    else{badge.textContent='🔴 Offline';badge.className='badge offline';showToast('❌ Koneksi putus!');}
+});
+window.onbeforeunload=()=>{db.ref(ROOM+'/masters/'+MASTER_ID).remove();};
+console.log('🎮 Master Ready');
+</script>
+</body>
+    </html>            padding: 12px;
             border: 1px solid rgba(255,255,255,0.04);
             margin-top: 8px;
         }
