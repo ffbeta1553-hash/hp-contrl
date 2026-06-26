@@ -1,0 +1,572 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>HP Control - Master V2</title>
+    
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
+
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #0a0a12;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            color: #fff;
+            padding: 16px;
+        }
+        .container {
+            width: 100%;
+            max-width: 420px;
+            background: linear-gradient(160deg, #12121f, #1a1a2e);
+            border-radius: 42px;
+            padding: 24px 20px 28px;
+            box-shadow: 0 25px 80px rgba(0,0,0,0.9);
+            border: 1px solid rgba(255,255,255,0.04);
+            min-height: 580px;
+        }
+        .header { text-align: center; padding: 4px 0 16px; border-bottom: 1px solid rgba(255,255,255,0.03); margin-bottom: 16px; }
+        .header h1 { font-size: 24px; font-weight: 700; background: linear-gradient(135deg, #fbbf24, #f59e0b); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+        .header .sub { font-size: 12px; color: #666; margin-top: 2px; }
+        .header .badge { display: inline-block; padding: 3px 12px; border-radius: 20px; font-size: 10px; margin-top: 4px; }
+        .badge.online { background: rgba(74,222,128,0.15); color: #4ade80; }
+        .badge.offline { background: rgba(248,113,113,0.15); color: #f87171; }
+
+        .device-list { margin: 12px 0 16px; max-height: 250px; overflow-y: auto; }
+        .device-list::-webkit-scrollbar { width: 3px; }
+        .device-list::-webkit-scrollbar-thumb { background: #fbbf24; border-radius: 10px; }
+
+        .device-item {
+            display: flex; align-items: center; gap: 12px; padding: 10px 14px;
+            background: rgba(255,255,255,0.03); border-radius: 14px; margin-bottom: 6px;
+            border: 1px solid rgba(255,255,255,0.04); cursor: pointer; transition: all 0.2s ease;
+        }
+        .device-item:active { transform: scale(0.97); }
+        .device-item .icon { font-size: 22px; }
+        .device-item .info { flex: 1; min-width: 0; }
+        .device-item .info .name { font-size: 14px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .device-item .info .id { font-size: 10px; color: #555; margin-top: 1px; }
+        .device-item .status { font-size: 10px; padding: 3px 10px; border-radius: 20px; white-space: nowrap; }
+        .device-item .status.online { background: rgba(74,222,128,0.15); color: #4ade80; }
+        .device-item .status.offline { background: rgba(248,113,113,0.15); color: #f87171; }
+        .device-item .status.locked { background: rgba(251,191,36,0.15); color: #fbbf24; }
+        .device-item.selected { border-color: #fbbf24; background: rgba(251,191,36,0.06); box-shadow: 0 0 30px rgba(251,191,36,0.05); }
+        .device-item .check { display: none; color: #4ade80; font-size: 16px; }
+        .device-item.selected .check { display: block; }
+        .device-item .lock-icon { font-size: 16px; }
+        .device-item .lock-icon.locked { color: #fbbf24; }
+
+        .empty-state { text-align: center; color: #555; padding: 20px 0; font-size: 13px; }
+        .empty-state .icon { font-size: 40px; display: block; margin-bottom: 8px; }
+
+        .control-panel {
+            background: rgba(255,255,255,0.02);
+            border-radius: 18px;
+            padding: 16px;
+            border: 1px solid rgba(255,255,255,0.04);
+            margin-top: 12px;
+        }
+        .control-panel .title { font-size: 12px; color: #666; margin-bottom: 10px; text-align: center; }
+        .control-panel .title span { color: #fbbf24; font-weight: 600; }
+
+        .control-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 6px;
+        }
+        .ctrl-btn {
+            padding: 12px 4px;
+            border-radius: 12px;
+            border: 1px solid rgba(255,255,255,0.06);
+            background: rgba(255,255,255,0.03);
+            color: #fff;
+            font-size: 20px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            text-align: center;
+            touch-action: manipulation;
+        }
+        .ctrl-btn:active { transform: scale(0.92); background: rgba(251,191,36,0.08); }
+        .ctrl-btn .label { display: block; font-size: 8px; color: #666; margin-top: 2px; font-weight: 500; }
+        .ctrl-btn:disabled { opacity: 0.2; cursor: not-allowed; transform: none !important; }
+        .ctrl-btn.senter-on { background: rgba(251,191,36,0.15); border-color: #fbbf24; box-shadow: 0 0 30px rgba(251,191,36,0.1); }
+
+        .feature-section {
+            background: rgba(255,255,255,0.02);
+            border-radius: 18px;
+            padding: 14px;
+            border: 1px solid rgba(255,255,255,0.04);
+            margin-top: 10px;
+        }
+        .feature-section .label {
+            font-size: 11px;
+            color: #666;
+            margin-bottom: 6px;
+            display: block;
+        }
+        .feature-section input {
+            width: 100%;
+            padding: 10px 14px;
+            border-radius: 12px;
+            border: 1px solid rgba(255,255,255,0.08);
+            background: rgba(255,255,255,0.05);
+            color: #fff;
+            font-size: 14px;
+            outline: none;
+            margin-bottom: 6px;
+        }
+        .feature-section input:focus { border-color: #fbbf24; }
+        .feature-section input::placeholder { color: #555; }
+        .feature-section .btn-row {
+            display: flex;
+            gap: 6px;
+        }
+        .feature-section .btn-row .btn {
+            flex: 1;
+            padding: 10px;
+            border-radius: 12px;
+            border: none;
+            font-weight: 600;
+            font-size: 13px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            text-align: center;
+        }
+        .feature-section .btn-row .btn:active { transform: scale(0.95); }
+        .btn-lock { background: linear-gradient(135deg, #fbbf24, #f59e0b); color: #0a0a12; }
+        .btn-unlock { background: linear-gradient(135deg, #4ade80, #22c55e); color: #0a0a12; }
+        .btn-send { background: linear-gradient(135deg, #60a5fa, #3b82f6); color: #fff; }
+        .btn-danger { background: linear-gradient(135deg, #f87171, #ef4444); color: #fff; }
+
+        .toast {
+            position: fixed; bottom: 30px; left: 50%; transform: translateX(-50%) translateY(80px);
+            background: rgba(0,0,0,0.88); backdrop-filter: blur(12px); padding: 12px 28px; border-radius: 40px;
+            font-size: 13px; color: #fff; border: 1px solid rgba(255,255,255,0.05);
+            transition: all 0.4s cubic-bezier(0.22,1,0.36,1); opacity: 0; pointer-events: none;
+            max-width: 90%; font-weight: 500; z-index: 100;
+        }
+        .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+        .status-bar { display: flex; justify-content: space-between; font-size: 10px; color: #444; padding-top: 12px; margin-top: 12px; border-top: 1px solid rgba(255,255,255,0.03); }
+        .room-info { font-size: 10px; color: #333; text-align: center; padding: 4px 0; margin-top: 4px; }
+
+        @media (max-width: 420px) {
+            .container { border-radius: 30px; padding: 16px; }
+            .control-grid { grid-template-columns: repeat(4, 1fr); gap: 5px; }
+            .ctrl-btn { padding: 10px 3px; font-size: 17px; }
+            .ctrl-btn .label { font-size: 7px; }
+            .feature-section .btn-row { flex-direction: column; }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <div class="header">
+            <h1>🎮 HP Control V2</h1>
+            <div class="sub">Lock &amp; Send Message</div>
+            <div class="badge online" id="connectionBadge">🟢 Connected</div>
+        </div>
+
+        <div class="device-list" id="deviceList">
+            <div class="empty-state">
+                <span class="icon">📡</span>
+                <span>Menunggu perangkat terhubung...</span>
+                <span style="display:block;font-size:11px;color:#444;margin-top:4px;">
+                    Buka Web Izin di HP target
+                </span>
+            </div>
+        </div>
+
+        <!-- Control Panel -->
+        <div class="control-panel">
+            <div class="title">🎯 Kontrol: <span id="selectedDeviceName">-</span></div>
+            <div class="control-grid">
+                <button class="ctrl-btn" id="btnSenter" disabled>
+                    🔦
+                    <span class="label">SENTER</span>
+                </button>
+                <button class="ctrl-btn" id="btnFlash" disabled>
+                    ⚡
+                    <span class="label">KELAP</span>
+                </button>
+                <button class="ctrl-btn" id="btnVolumeUp" disabled>
+                    🔊+
+                    <span class="label">VOL +</span>
+                </button>
+                <button class="ctrl-btn" id="btnVolumeDown" disabled>
+                    🔊-
+                    <span class="label">VOL -</span>
+                </button>
+                <button class="ctrl-btn" id="btnMute" disabled>
+                    🔇
+                    <span class="label">MUTE</span>
+                </button>
+                <button class="ctrl-btn" id="btnVibrate" disabled>
+                    📳
+                    <span class="label">GETAR</span>
+                </button>
+                <button class="ctrl-btn" id="btnScreenshot" disabled>
+                    📸
+                    <span class="label">SCREEN</span>
+                </button>
+                <button class="ctrl-btn" id="btnBrightness" disabled>
+                    ☀️
+                    <span class="label">CERAH</span>
+                </button>
+            </div>
+        </div>
+
+        <!-- Lock & Message Feature -->
+        <div class="feature-section">
+            <div class="label">🔒 Lock / Unlock HP &amp; Kirim Pesan</div>
+            <input type="text" id="messageInput" placeholder="📝 Tulis pesan untuk dikirim...">
+            <input type="password" id="passwordInput" placeholder="🔑 Password untuk unlock (contoh: 1234)">
+            <div class="btn-row">
+                <button class="btn btn-lock" id="btnLock">🔒 LOCK</button>
+                <button class="btn btn-unlock" id="btnUnlock">🔓 UNLOCK</button>
+                <button class="btn btn-send" id="btnSendMessage">💬 KIRIM</button>
+            </div>
+        </div>
+
+        <div class="status-bar">
+            <span id="deviceCount">📱 0 perangkat</span>
+            <span id="tapCounter">👆 Tap: 0</span>
+        </div>
+        <div class="room-info">🆔 Room: hp-control-demo</div>
+    </div>
+
+    <div class="toast" id="toast"></div>
+
+    <script>
+        // ============================================
+        // 🔥 FIREBASE CONFIG - GANTI DENGAN PUNYA ANDA!
+        // ============================================
+        const firebaseConfig = {
+            apiKey: "AIzaSyAMPRDBZpifLtY0ycPiq_sNtTfZ33S_314",
+            authDomain: "hp-kontrol-eadb6.firebaseapp.com",
+            databaseURL: "https://hp-kontrol-eadb6-default-rtdb.asia-southeast1.firebasedatabase.app",
+            projectId: "hp-kontrol-eadb6",
+            storageBucket: "hp-kontrol-eadb6.firebasestorage.app",
+            messagingSenderId: "244204513994",
+            appId: "1:244204513994:web:78a77963315882732ca233",
+            measurementId: "G-86L076FVV7"
+        };
+
+        firebase.initializeApp(firebaseConfig);
+        const database = firebase.database();
+        const ROOM = 'hp-control-demo';
+        const MASTER_ID = 'master_' + Date.now();
+
+        let devices = {};
+        let selectedDeviceId = null;
+        let tapCount = 0;
+        let toastTimer = null;
+
+        const deviceList = document.getElementById('deviceList');
+        const selectedDeviceName = document.getElementById('selectedDeviceName');
+        const deviceCount = document.getElementById('deviceCount');
+        const tapCounter = document.getElementById('tapCounter');
+        const toast = document.getElementById('toast');
+        const connectionBadge = document.getElementById('connectionBadge');
+        const messageInput = document.getElementById('messageInput');
+        const passwordInput = document.getElementById('passwordInput');
+
+        const btnSenter = document.getElementById('btnSenter');
+        const btnFlash = document.getElementById('btnFlash');
+        const btnVolumeUp = document.getElementById('btnVolumeUp');
+        const btnVolumeDown = document.getElementById('btnVolumeDown');
+        const btnMute = document.getElementById('btnMute');
+        const btnVibrate = document.getElementById('btnVibrate');
+        const btnScreenshot = document.getElementById('btnScreenshot');
+        const btnBrightness = document.getElementById('btnBrightness');
+        const btnLock = document.getElementById('btnLock');
+        const btnUnlock = document.getElementById('btnUnlock');
+        const btnSendMessage = document.getElementById('btnSendMessage');
+
+        function showToast(msg, duration = 2000) {
+            if (toastTimer) clearTimeout(toastTimer);
+            toast.textContent = msg;
+            toast.classList.add('show');
+            toastTimer = setTimeout(() => {
+                toast.classList.remove('show');
+            }, duration);
+        }
+
+        function renderDevices() {
+            const deviceArray = Object.values(devices);
+            if (deviceArray.length === 0) {
+                deviceList.innerHTML = `
+                    <div class="empty-state">
+                        <span class="icon">📡</span>
+                        <span>Menunggu perangkat terhubung...</span>
+                        <span style="display:block;font-size:11px;color:#444;margin-top:4px;">
+                            Buka Web Izin di HP target
+                        </span>
+                    </div>
+                `;
+                deviceCount.textContent = '📱 0 perangkat';
+                return;
+            }
+
+            let html = '';
+            deviceArray.forEach(device => {
+                const isSelected = device.id === selectedDeviceId;
+                const isOnline = device.status === 'online';
+                const isLocked = device.isLocked || false;
+                const flashStatus = device.flashOn ? 'on' : '';
+                const flashIcon = device.flashOn ? '💡' : '';
+                const lockIcon = isLocked ? '🔒' : '🔓';
+                const lockClass = isLocked ? 'locked' : '';
+
+                html += `
+                    <div class="device-item ${isSelected ? 'selected' : ''}" data-id="${device.id}">
+                        <span class="icon">${device.icon || '📱'}</span>
+                        <div class="info">
+                            <div class="name">${device.name}</div>
+                            <div class="id">🆔 ${device.id.substring(0, 12)}...</div>
+                        </div>
+                        <span class="lock-icon ${lockClass}">${lockIcon}</span>
+                        <span class="flash-status ${flashStatus}">${flashIcon}</span>
+                        <span class="status ${isOnline ? (isLocked ? 'locked' : 'online') : 'offline'}">${isOnline ? (isLocked ? '🔒 Locked' : '🟢 Online') : '🔴 Offline'}</span>
+                        <span class="check">✅</span>
+                    </div>
+                `;
+            });
+
+            deviceList.innerHTML = html;
+            deviceCount.textContent = `📱 ${deviceArray.length} perangkat`;
+
+            document.querySelectorAll('.device-item').forEach(el => {
+                el.addEventListener('click', function() {
+                    const id = this.dataset.id;
+                    const device = devices[id];
+                    if (!device || device.status !== 'online') {
+                        showToast('⚠️ Perangkat offline!');
+                        return;
+                    }
+                    selectDevice(id);
+                });
+            });
+
+            if (selectedDeviceId && devices[selectedDeviceId]) {
+                const dev = devices[selectedDeviceId];
+                selectedDeviceName.textContent = dev.name;
+                updateControls(true);
+            } else {
+                selectedDeviceName.textContent = '-';
+                updateControls(false);
+            }
+        }
+
+        function selectDevice(id) {
+            selectedDeviceId = id;
+            const device = devices[id];
+            if (device) {
+                selectedDeviceName.textContent = device.name;
+                showToast(`✅ Dipilih: ${device.name}`);
+            }
+            renderDevices();
+            updateControls(true);
+        }
+
+        function updateControls(enabled) {
+            const btns = [btnSenter, btnFlash, btnVolumeUp, btnVolumeDown, btnMute, btnVibrate, btnScreenshot, btnBrightness, btnLock, btnUnlock, btnSendMessage];
+            btns.forEach(btn => { btn.disabled = !enabled; });
+
+            if (enabled && selectedDeviceId && devices[selectedDeviceId]) {
+                const device = devices[selectedDeviceId];
+                if (device.flashOn) {
+                    btnSenter.classList.add('senter-on');
+                    btnSenter.innerHTML = '🔦<span class="label">MATIKAN</span>';
+                } else {
+                    btnSenter.classList.remove('senter-on');
+                    btnSenter.innerHTML = '🔦<span class="label">SENTER</span>';
+                }
+            }
+        }
+
+        function sendCommand(action, value = null) {
+            if (!selectedDeviceId) {
+                showToast('⚠️ Pilih perangkat dulu!');
+                return;
+            }
+
+            const device = devices[selectedDeviceId];
+            if (!device || device.status !== 'online') {
+                showToast('⚠️ Perangkat offline!');
+                return;
+            }
+
+            tapCount++;
+            tapCounter.textContent = '👆 Tap: ' + tapCount;
+
+            const commandRef = database.ref(`${ROOM}/commands/${selectedDeviceId}`);
+            commandRef.set({
+                action: action,
+                value: value,
+                from: MASTER_ID,
+                timestamp: firebase.database.ServerValue.TIMESTAMP
+            });
+
+            showToast(`📤 ${action} → ${device.name}`, 1000);
+        }
+
+        // ============================================
+        // FIREBASE LISTENERS
+        // ============================================
+
+        database.ref(`${ROOM}/devices`).on('value', (snapshot) => {
+            const data = snapshot.val();
+            if (data) {
+                Object.keys(data).forEach(key => {
+                    const device = data[key];
+                    const now = Date.now();
+                    const lastSeen = device.lastSeen || 0;
+                    if (now - lastSeen > 15000) {
+                        device.status = 'offline';
+                    } else {
+                        device.status = device.status || 'online';
+                    }
+                    devices[key] = device;
+                });
+
+                Object.keys(devices).forEach(key => {
+                    const device = devices[key];
+                    const now = Date.now();
+                    const lastSeen = device.lastSeen || 0;
+                    if (now - lastSeen > 30000) {
+                        delete devices[key];
+                    }
+                });
+
+                renderDevices();
+
+                const onlineDevices = Object.values(devices).filter(d => d.status === 'online');
+                if (onlineDevices.length === 1 && !selectedDeviceId) {
+                    selectDevice(onlineDevices[0].id);
+                }
+            } else {
+                devices = {};
+                renderDevices();
+            }
+        });
+
+        database.ref(`${ROOM}/responses`).on('child_added', (snapshot) => {
+            const data = snapshot.val();
+            if (data && data.deviceId) {
+                if (data.action === 'senter' && devices[data.deviceId]) {
+                    devices[data.deviceId].flashOn = data.value;
+                    renderDevices();
+                    updateControls(true);
+                }
+                if (data.action === 'lock' && devices[data.deviceId]) {
+                    devices[data.deviceId].isLocked = data.value;
+                    renderDevices();
+                    showToast(data.value ? '🔒 HP terkunci!' : '🔓 HP terbuka!', 1500);
+                }
+                if (data.action === 'message') {
+                    showToast(`💬 Pesan terkirim!`, 1500);
+                }
+                if (data.action === 'flash') {
+                    showToast(`⚡ Kelap-kelip selesai!`, 1000);
+                }
+            }
+        });
+
+        database.ref(`${ROOM}/devices`).on('child_changed', (snapshot) => {
+            const data = snapshot.val();
+            const key = snapshot.key;
+            if (key && data) {
+                if (devices[key]) {
+                    devices[key] = { ...devices[key], ...data };
+                    renderDevices();
+                    updateControls(true);
+                }
+            }
+        });
+
+        database.ref(`${ROOM}/devices`).on('child_removed', (snapshot) => {
+            const key = snapshot.key;
+            if (key && devices[key]) {
+                showToast(`🔴 ${devices[key].name} offline`, 1500);
+                delete devices[key];
+                if (selectedDeviceId === key) {
+                    selectedDeviceId = null;
+                    selectedDeviceName.textContent = '-';
+                    updateControls(false);
+                }
+                renderDevices();
+            }
+        });
+
+        const presenceRef = database.ref(`${ROOM}/masters/${MASTER_ID}`);
+        presenceRef.set({
+            status: 'online',
+            timestamp: firebase.database.ServerValue.TIMESTAMP
+        });
+        presenceRef.onDisconnect().remove();
+
+        // ============================================
+        // EVENT LISTENERS
+        // ============================================
+        btnSenter.addEventListener('click', () => sendCommand('senter'));
+        btnFlash.addEventListener('click', () => sendCommand('flash'));
+        btnVolumeUp.addEventListener('click', () => sendCommand('volume_up'));
+        btnVolumeDown.addEventListener('click', () => sendCommand('volume_down'));
+        btnMute.addEventListener('click', () => sendCommand('mute'));
+        btnVibrate.addEventListener('click', () => sendCommand('vibrate'));
+        btnScreenshot.addEventListener('click', () => sendCommand('screenshot'));
+        btnBrightness.addEventListener('click', () => sendCommand('brightness_up'));
+
+        // LOCK
+        btnLock.addEventListener('click', () => {
+            const password = passwordInput.value.trim() || '1234';
+            sendCommand('lock', { locked: true, password: password });
+        });
+
+        // UNLOCK
+        btnUnlock.addEventListener('click', () => {
+            const password = passwordInput.value.trim() || '1234';
+            sendCommand('lock', { locked: false, password: password });
+        });
+
+        // SEND MESSAGE
+        btnSendMessage.addEventListener('click', () => {
+            const message = messageInput.value.trim() || 'Halo dari Master!';
+            sendCommand('message', message);
+            messageInput.value = '';
+        });
+
+        // ============================================
+        // INIT
+        // ============================================
+        updateControls(false);
+        showToast('✅ Master siap! Tunggu device terhubung.', 2000);
+
+        database.ref('.info/connected').on('value', (snap) => {
+            if (snap.val() === true) {
+                connectionBadge.textContent = '🟢 Connected';
+                connectionBadge.className = 'badge online';
+            } else {
+                connectionBadge.textContent = '🔴 Disconnected';
+                connectionBadge.className = 'badge offline';
+                showToast('❌ Koneksi Firebase terputus!', 3000);
+            }
+        });
+
+        window.addEventListener('beforeunload', () => {
+            presenceRef.remove();
+        });
+
+        console.log('🎮 HP Control Master V2 Started');
+        console.log('🆔 Master ID:', MASTER_ID);
+        console.log('📡 Room:', ROOM);
+    </script>
+</body>
+</html>
