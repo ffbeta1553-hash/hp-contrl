@@ -217,6 +217,84 @@ window.onbeforeunload=()=>{db.ref(ROOM+'/masters/'+MASTER_ID).remove();};
 console.log('🎮 Master Ready');
 </script>
 </body>
+            </html>el=>{
+        el.onclick=function(){
+            const id=this.dataset.id,d=devices[id];
+            if(!d||d.status!=='online'){showToast('⚠️ Offline!');return;}
+            selectDevice(id);
+        };
+    });
+    if(selectedId&&devices[selectedId]){selectedName.textContent=devices[selectedId].name;updateControls(true);}
+    else{selectedName.textContent='-';updateControls(false);}
+}
+function selectDevice(id){selectedId=id;if(devices[id]){selectedName.textContent=devices[id].name;showToast('✅ '+devices[id].name);}renderDevices();updateControls(true);}
+function updateControls(en){
+    [btnSenter,btnFlash,btnVolUp,btnVolDown,btnMute,btnVibrate,btnScreenshot,btnBrightness,btnLock,btnUnlock,btnSend].forEach(b=>b.disabled=!en);
+    if(en&&selectedId&&devices[selectedId]){
+        const d=devices[selectedId];
+        if(d.flashOn){btnSenter.classList.add('senter-on');btnSenter.innerHTML='🔦<span class="label">MATIKAN</span>';}
+        else{btnSenter.classList.remove('senter-on');btnSenter.innerHTML='🔦<span class="label">SENTER</span>';}
+    }
+}
+function sendCommand(a,v=null){
+    if(!selectedId){showToast('⚠️ Pilih device!');return;}
+    const d=devices[selectedId];
+    if(!d||d.status!=='online'){showToast('⚠️ Offline!');return;}
+    tap++;tapCounter.textContent='👆 '+tap;
+    db.ref(ROOM+'/commands/'+selectedId).set({action:a,value:v,from:MASTER_ID,timestamp:firebase.database.ServerValue.TIMESTAMP});
+    showToast('📤 '+a+' → '+d.name,1000);
+}
+db.ref(ROOM+'/devices').on('value',s=>{
+    const data=s.val();
+    if(data){
+        Object.keys(data).forEach(k=>{
+            const d=data[k],now=Date.now(),last=d.lastSeen||0;
+            d.status=(now-last>15000)?'offline':(d.status||'online');
+            devices[k]=d;
+        });
+        Object.keys(devices).forEach(k=>{
+            const d=devices[k],now=Date.now(),last=d.lastSeen||0;
+            if(now-last>30000)delete devices[k];
+        });
+        renderDevices();
+        const online=Object.values(devices).filter(d=>d.status==='online');
+        if(online.length===1&&!selectedId)selectDevice(online[0].id);
+    }else{devices={};renderDevices();}
+});
+db.ref(ROOM+'/responses').on('child_added',s=>{
+    const d=s.val();
+    if(d&&d.deviceId){
+        if(d.action==='senter'&&devices[d.deviceId]){devices[d.deviceId].flashOn=d.value;renderDevices();updateControls(true);}
+        if(d.action==='lock'&&devices[d.deviceId]){devices[d.deviceId].isLocked=d.value;renderDevices();showToast(d.value?'🔒 Terkunci!':'🔓 Terbuka!');}
+        if(d.action==='message')showToast('💬 Pesan terkirim!');
+        if(d.action==='flash')showToast('⚡ Kelap-kelip selesai!');
+    }
+});
+db.ref(ROOM+'/devices').on('child_changed',s=>{const d=s.val(),k=s.key;if(k&&d&&devices[k]){devices[k]={...devices[k],...d};renderDevices();updateControls(true);}});
+db.ref(ROOM+'/devices').on('child_removed',s=>{const k=s.key;if(k&&devices[k]){showToast('🔴 '+devices[k].name+' offline');delete devices[k];if(selectedId===k){selectedId=null;selectedName.textContent='-';updateControls(false);}renderDevices();}});
+db.ref(ROOM+'/masters/'+MASTER_ID).set({status:'online',timestamp:firebase.database.ServerValue.TIMESTAMP});
+db.ref(ROOM+'/masters/'+MASTER_ID).onDisconnect().remove();
+btnSenter.onclick=()=>sendCommand('senter');
+btnFlash.onclick=()=>sendCommand('flash');
+btnVolUp.onclick=()=>sendCommand('volume_up');
+btnVolDown.onclick=()=>sendCommand('volume_down');
+btnMute.onclick=()=>sendCommand('mute');
+btnVibrate.onclick=()=>sendCommand('vibrate');
+btnScreenshot.onclick=()=>sendCommand('screenshot');
+btnBrightness.onclick=()=>sendCommand('brightness_up');
+btnLock.onclick=()=>{const p=passIn.value.trim()||'1234',m=msgIn.value.trim()||'🔒 Terkunci!';sendCommand('lock',{locked:true,password:p,message:m});};
+btnUnlock.onclick=()=>{const p=passIn.value.trim()||'1234';sendCommand('lock',{locked:false,password:p});};
+btnSend.onclick=()=>{const m=msgIn.value.trim()||'Halo!';sendCommand('message',m);msgIn.value='';};
+updateControls(false);
+showToast('✅ Siap! Tunggu device.',2000);
+db.ref('.info/connected').on('value',s=>{
+    if(s.val()===true){badge.textContent='🟢 Online';badge.className='badge online';}
+    else{badge.textContent='🔴 Offline';badge.className='badge offline';showToast('❌ Koneksi putus!');}
+});
+window.onbeforeunload=()=>{db.ref(ROOM+'/masters/'+MASTER_ID).remove();};
+console.log('🎮 Master Ready');
+</script>
+</body>
     </html>            padding: 12px;
             border: 1px solid rgba(255,255,255,0.04);
             margin-top: 8px;
